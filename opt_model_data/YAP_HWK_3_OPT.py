@@ -48,7 +48,7 @@ model.costs             = Param(model.tech, initialize={'s_cap' : solar_cap_cost
 
 ## load data into parameters, solar and wind data are houlry capacity factor data
 data = DataPortal()
-data.load(filename = 'opt_model_data/wind_solar_cf.csv', select = ('t', 'solar'), param = model.solar, index = model.t)
+data.load(filename = 'opt_data_model/2022_ERCOT_data.csv', select = ('t', 'solar'), param = model.solar, index = model.t)
 
 ## define variables
 model.cap               = Var(model.tech, domain = NonNegativeReals)
@@ -99,8 +99,8 @@ model = model.create_instance(data)
 # model.t.pprint()
 
 # solve the model
-opt = SolverFactory('glpk')
-# opt = SolverFactory('gurobi')
+#opt = SolverFactory('glpk')
+opt = SolverFactory('gurobi') #hehe use this one, apparently it fast
 status = opt.solve(model) 
 #gurobi is a lot faster: uncomment that and comment the other one
 
