@@ -23,6 +23,7 @@ from pyomo.opt import SolverFactory
 ## constants and assumptions
 # capital costs for solar, and energy storage systems
 solar_cap_cost 			= 800000000       # $/GW
+wind_cap_cost 			= 1200000000       # $/GW #look man I'm just here to copy this
 ESS_p_cap_cost 			= 200000000       # $/GW
 ESS_e_cap_cost 			= 150000000       # $/GWh
 
@@ -32,23 +33,25 @@ ESS_eta_c           	= 0.95      # ESS charging efficiency, looses 5% when charg
 ESS_eta_d        		= 0.9       # ESS discharging efficiency, looses 10% when discharging
 ESS_p_var_cost          = 5000     # ESS discharge cost $/kWh
 
-curtailment_cost        = 10000     # curtailment penalty $/kWh
+curtailment_cost        = 1000     # curtailment penalty $/kWh
 
 demand                  = 1000      # kW, how much power must the system deliver?
 
 # create the model
-model = AbstractModel(name = 'solar-storage model')
+model = AbstractModel(name = 'wind-n-solar-storage model')
 
 # create model sets
 model.t                 = Set(initialize = [i for i in range(8760)], ordered=True)    
-model.tech              = Set(initialize =['s_cap', 'ESS_power_cap', 'ESS_energy_cap'], ordered=True)  
+model.tech              = Set(initialize =['w_cap', 's_cap', 'ESS_power_cap', 'ESS_energy_cap'], ordered=True)  
 
+model.wind              = Param(model.t)
 model.solar             = Param(model.t)
-model.costs             = Param(model.tech, initialize={'s_cap' : solar_cap_cost, 'ESS_power_cap' : ESS_p_cap_cost, 'ESS_energy_cap' : ESS_e_cap_cost})
+model.costs             = Param(model.tech, initialize={'w_cap' : wind_cap_cost, 's_cap' : solar_cap_cost, 'ESS_power_cap' : ESS_p_cap_cost, 'ESS_energy_cap' : ESS_e_cap_cost})
 
 ## load data into parameters, solar and wind data are houlry capacity factor data
 data = DataPortal()
 data.load(filename = 'opt_data_model/2022_ERCOT_data.csv', select = ('t', 'solar'), param = model.solar, index = model.t)
+data.load(filename = 'opt_data_model/2022_ERCOT_data.csv', select = ('t', 'wind'), param = model.wind, index = model.t)
 
 ## define variables
 model.cap               = Var(model.tech, domain = NonNegativeReals)
@@ -66,7 +69,7 @@ model.OBJ = Objective(rule=obj_expression)
 
 # supply/demand match constraint
 def match_const(model, i):
-    return model.solar[i]*model.cap['s_cap'] + model.ESS_d[i] - model.ESS_c[i] - model.curt[i] - demand == 0   
+    return model.wind[i]*model.cap['w_cap'] + model.solar[i]*model.cap['s_cap'] + model.ESS_d[i] - model.ESS_c[i] - model.curt[i] - demand == 0   
 model.match = Constraint(model.t, rule = match_const)
 
 # ESS charge/discharge constraint
